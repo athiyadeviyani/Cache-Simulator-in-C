@@ -1,0 +1,43 @@
+block_size = 32 bytes
+cache size = 16 blocks
+associativity = 4 ways
+cache mapping = LRU
+
+Start of accesses
+
+Address: 0x12d202d0, tag: 0x25a405, set index: 2, offset: 16, Added item for the first time
+Address: 0xab76a48 , tag: 0x156ed4, set index: 2, offset:  8, Added item for the first time
+Address: 0x12d202d3, tag: 0x25a405, set index: 2, offset: 19, Cache Hit
+Address: 0xab76a40 , tag: 0x156ed4, set index: 2, offset:  0, Cache Hit
+Address: 0x12d23a70, tag: 0x25a474, set index: 3, offset: 16, Added item for the first time
+Address: 0x12d23a71, tag: 0x25a474, set index: 3, offset: 17, Cache Hit
+Address: 0xab76a38 , tag: 0x156ed4, set index: 1, offset: 24, Added item for the first time
+Address: 0x22d23a74, tag: 0x45a474, set index: 3, offset: 20, Added item for the first time
+Address: 0xab76a30 , tag: 0x156ed4, set index: 1, offset: 16, Cache Hit
+Address: 0x12d23a76, tag: 0x25a474, set index: 3, offset: 22, Cache Hit
+Address: 0xab76a28 , tag: 0x156ed4, set index: 1, offset:  8, Cache Hit
+Address: 0x32d23a78, tag: 0x65a474, set index: 3, offset: 24, Added item for the first time
+Address: 0x5b76a20 , tag: 0xb6ed4 , set index: 1, offset:  0, Added item for the first time
+Address: 0x42d23a7a, tag: 0x85a474, set index: 3, offset: 26, Added item for the first time
+Address: 0x7b76a18 , tag: 0xf6ed4 , set index: 0, offset: 24, Added item for the first time
+Address: 0x52d23a7c, tag: 0xa5a474, set index: 3, offset: 28, Cache Miss - replacing entry
+Address: 0x12d23a7d, tag: 0x25a474, set index: 3, offset: 29, Cache Miss - replacing entry
+Address: 0x12d23a80, tag: 0x25a475, set index: 0, offset:  0, Added item for the first time
+Address: 0x12d23a84, tag: 0x25a475, set index: 0, offset:  4, Cache Hit
+Address: 0x12d23a86, tag: 0x25a475, set index: 0, offset:  6, Cache Hit
+
+End of accesses
+
+
+
+Final cache state:
+
+----------------------------------------------------------------
+|Set       |     Block 0|     Block 1|     Block 2|     Block 3|
+----------------------------------------------------------------
+|          |         tag|         tag|         tag|         tag|
+|0         |     0xf6ed4|    0x25a475|          --|          --|
+|1         |    0x156ed4|     0xb6ed4|          --|          --|
+|2         |    0x25a405|    0x156ed4|          --|          --|
+|3         |    0xa5a474|    0x25a474|    0x65a474|    0x85a474|
+----------------------------------------------------------------
