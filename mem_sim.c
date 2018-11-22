@@ -98,6 +98,16 @@ void print_statistics(uint32_t num_cache_tag_bits, uint32_t cache_offset_bits, r
  *
  */
 
+void shiftArray(int* hits, int target, int currentpos) {
+    int i;
+    i = target;
+    while (i < currentpos) {
+        int tempval = hits[i];
+        hits[i] = hits[i+1];
+        hits[i+1] = tempval;
+    }
+}
+
 
 int main(int argc, char** argv) {
     time_t t;
@@ -152,20 +162,23 @@ int main(int argc, char** argv) {
 
     /// CALCULATE THE OFSET BITS, INDEX, TAG
     uint32_t g_cache_index_bits = 0;
+    uint32_t no_of_sets = 0;
+
     g_cache_offset_bits = log(cache_block_size) / log(2);
     g_cache_index_bits = (int)(log(number_of_cache_blocks / associativity) / log(2));
     g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
+
+    no_of_sets = number_of_cache_blocks/associativity;
     
     int first_in_index = 0;
+    int current_position = 0;
     //uint32_t *hits;
     //hits = malloc(number_of_cache_blocks);
     uint32_t *hits;
     hits = (uint32_t *) malloc(number_of_cache_blocks * sizeof(uint32_t));
     
-    // get the bits from an address
-    int getBits(int number, int a, int b) {
-        return (((1 << a) - 1) & (number >> (b - 1)));
-    }
+
+   
     
     /* Open the file mem_trace.txt to read memory accesses */
     FILE *ptr_file;
@@ -205,33 +218,94 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (replacement_policy == FIFO && associativity > 1) {
-            uint32_t tag = access.address >> g_cache_offset_bits;
-            //int line = 0;
-            first_in_index = first_in_index % number_of_cache_blocks;
-            
-            int hit = 0;
-            int i = 0;
+        // FOR FULLY ASSOCIATIVE CACHE, associativity = number of cache blocks
+        // implement FIFO, LRU and Random policies
+        if (associativity == number_of_cache_blocks) {
+            if (replacement_policy == FIFO && associativity > 1) {
+                uint32_t tag = access.address >> g_cache_offset_bits;
+                //int line = 0;
+                first_in_index = first_in_index % number_of_cache_blocks;
+                
+                int hit = 0; // boolean to check if it is hit or not
+                int i = 0;
 
-            // populate the initially empty cache blocks 
-            
-            while (i < number_of_cache_blocks) {
-                if (hit == 0) {
-                    if (hits[i] == tag) {
-                        g_result.cache_hits++;
-                        i++;
-                        hit = 1; // then hit is true
-                    }
-                } 
-                i++;
+                // populate the initially empty cache blocks 
+                
+                while (i < number_of_cache_blocks) {
+                    if (hit == 0) {
+                        if (hits[i] == tag) {
+                            g_result.cache_hits++;
+                            i++;
+                            hit = 1; // then hit is true
+                        }
+                    } 
+                    i++;
+                }
+
+                if (hit == 0) { // if hit is false
+                    hits[first_in_index] = tag; // replace the first in tag with the current tag
+                    g_result.cache_misses++; // increment the number of misses
+                    first_in_index++; // the next first in tag is the next tag after the original first in tag
+                }
+
             }
 
-            if (hit == 0) { // if hit is false
-                hits[first_in_index] = tag; // replace the first in tag with the current tag
-                g_result.cache_misses++; // increment the number of misses
-                first_in_index++; // the next first in tag is the next tag after the original first in tag
-            }
+            if (replacement_policy == LRU && associativity > 1) {
 
+                uint32_t tag = access.address >> g_cache_offset_bits;
+                // following the example in the tutorial
+                // 1. 22 - [22]
+                // 2. 5  - [22, 5]
+                // 3. 12 - [22, 5, 12]
+                // 4. 8  - [22, 5, 12, 8]
+                // 5. 22 - [22, 5, 12, 8, 22] -> [5, 12, 8, 22] 
+                // 6. 12 - [22, 5, 12, 8, 22, 12] -> [5, 8, 22, 12]
+                // 7. 19 - [22, 5, 12, 8, 22, 12, 19] -> [19, 8, 22, 12]
+
+                // so implement a function that searches if an element is in an array
+                // then add it to a new array at the end of the new array
+                // function in python
+                // def searchAndReplace(element, array):
+                //     result = []
+                //     if element in array:
+                //         for other in array:
+                //             if other != element:
+                //                 result.append(other)
+                //         result.append(element)
+                //     else:
+                //         result.append(element)
+                //         for i in range(1, len(array)):
+                //             result.append(array[i])
+                //     return result
+                
+                current_position = current_position % number_of_cache_blocks;
+
+                while (i < number_of_cache_blocks) {
+                    if (hit == 0) {
+                        if (hits[i] == tag) {
+                            shiftArray(hits, i, current_position);
+                            g_result.cache_hits++;
+                            i++;
+                            hit = 1; // then hit is true
+                        }
+                    } 
+                    i++;
+                }
+
+                if (hit == 0) { // if hit is false
+                    hits[0] = tag; 
+                    shiftArray(hits, 0, current_position);
+                    g_result.cache_misses++; 
+                    current_position++; 
+                }
+
+
+                
+
+                }
+                
+
+            }
         }
 
 
