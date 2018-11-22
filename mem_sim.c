@@ -153,10 +153,10 @@ int main(int argc, char** argv) {
     /// CALCULATE THE OFSET BITS, INDEX, TAG
     uint32_t g_cache_index_bits = 0;
     g_cache_offset_bits = log(cache_block_size) / log(2);
-    g_cache_index_bits = log(number_of_cache_blocks) / log(2);
+    g_cache_index_bits = (int)(log(number_of_cache_blocks / associativity) / log(2));
     g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
     
-
+    int first_in_index = 0;
     //uint32_t *hits;
     //hits = malloc(number_of_cache_blocks);
     uint32_t *hits;
@@ -205,8 +205,33 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (replacement_policy == FIFO) {
+        if (replacement_policy == FIFO && associativity > 1) {
+            uint32_t tag = access.address >> g_cache_offset_bits;
+            //int line = 0;
+            first_in_index = first_in_index % number_of_cache_blocks;
             
+            int hit = 0;
+            int i = 0;
+
+            // populate the initially empty cache blocks 
+            
+            while (i < number_of_cache_blocks) {
+                if (hit == 0) {
+                    if (hits[i] == tag) {
+                        g_result.cache_hits++;
+                        i++;
+                        hit = 1; // then hit is true
+                    }
+                } 
+                i++;
+            }
+
+            if (hit == 0) { // if hit is false
+                hits[first_in_index] = tag; // replace the first in tag with the current tag
+                g_result.cache_misses++; // increment the number of misses
+                first_in_index++; // the next first in tag is the next tag after the original first in tag
+            }
+
         }
 
 
