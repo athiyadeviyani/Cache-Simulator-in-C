@@ -6,6 +6,7 @@
  * *    TA: Siavash Katebzadeh
  ***************************************************************************/
 
+// 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,7 +72,7 @@ mem_access_t read_transaction(FILE *ptr_file) {
     if (fgets(buf, 1000, ptr_file)!= NULL) {
         /* Get the address */
         token = strsep(&string, " \n");
-        access.address = (uint32_t)strtol(token, NULL, 16);
+        access.address = (uint32_t)strtoul(token, NULL, 16);
         return access;
     }
 
@@ -98,21 +99,15 @@ void print_statistics(uint32_t num_cache_tag_bits, uint32_t cache_offset_bits, r
  *
  */
 
-void shiftArray(int* hits, int target, int currentpos) {
-    int i;
-    i = target;
-    while (i < currentpos) {
-        int tempval = hits[i];
-        hits[i] = hits[i+1];
-        hits[i+1] = tempval;
-    }
-}
+
+
+    
 
 
 int main(int argc, char** argv) {
     time_t t;
     /* Intializes random number generator */
-    /* Important: *DO NOT* call this function anywhere else. */
+    /* Important: DO NOT call this function anywhere else. */
     srand((unsigned) time(&t));
     /* ----------------------------------------------------- */
     /* ----------------------------------------------------- */
@@ -159,27 +154,9 @@ int main(int argc, char** argv) {
     printf("input:cache_block_size: %u\n", cache_block_size);
     printf("\n");
 
-
-    /// CALCULATE THE OFSET BITS, INDEX, TAG
-    uint32_t g_cache_index_bits = 0;
-    uint32_t no_of_sets = 0;
-
-    g_cache_offset_bits = log(cache_block_size) / log(2);
-    g_cache_index_bits = (int)(log(number_of_cache_blocks / associativity) / log(2));
-    g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
-
-    no_of_sets = number_of_cache_blocks/associativity;
-    
-    int first_in_index = 0;
-    int current_position = 0;
-    //uint32_t *hits;
-    //hits = malloc(number_of_cache_blocks);
-    uint32_t *hits;
-    hits = (uint32_t *) malloc(number_of_cache_blocks * sizeof(uint32_t));
     
 
-   
-    
+
     /* Open the file mem_trace.txt to read memory accesses */
     FILE *ptr_file;
     ptr_file = fopen(file,"r");
@@ -196,120 +173,192 @@ int main(int argc, char** argv) {
 
     /* You may want to setup your Cache structure here. */
 
+    
+    //  STRUCT FOR CACHE BLOCK
+    typedef struct {
+      uint32_t valid;
+      uint32_t tag;
+      int block_age;
+    } Block;
+
+    // STRUCT FOR CACHE SET
+    typedef struct {
+      Block* blocks;
+    } Set;
+
+    // STRUCT FOR ACTUAL CACHE
+    typedef struct {
+      Set* sets;
+    } Cache;
+
+    // dynamically allocate the size of a cache set
+    
+    uint32_t g_cache_index_bits = 0;
+    uint32_t no_of_sets = 0;
+
+    no_of_sets = number_of_cache_blocks/associativity;
+
+    g_cache_offset_bits = log(cache_block_size) / log(2);
+    g_cache_index_bits = (int) (log(no_of_sets) / log(2));
+    g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
+    // while (i < no_of_sets) {
+    //     while (j < associativity) {
+    //        myCache.sets[i].blocks[j].valid = 0;
+    //        myCache.sets[i].blocks[j].tag = 0;
+    //        myCache.sets[i].blocks[j].block_age = 0;
+    //        j++;
+    //    }
+    //    i++;
+    // }
+
+    int FIFO_index = 0;
+
+    int random = 0;
+    int counter = 0;
+
+    int k = 0;
+
+    Cache myCache;
+    myCache.sets = (Set*) malloc(no_of_sets * sizeof(Set));
+
+    for (k = 0; k < no_of_sets; k++) {
+        myCache.sets[k].blocks = (Block*)malloc(sizeof(Block) * (associativity));
+    }
+
+    // dynamically allocate the size for a block in each set
+    int i = 0;
+    int j = 0;
+
+    for (i = 0; i < no_of_sets; i++) {
+        for (j = 0; j < associativity; j++) {
+            myCache.sets[i].blocks[j].valid = 0;
+            myCache.sets[i].blocks[j].tag = 0;
+            myCache.sets[i].blocks[j].block_age = 0;
+        }
+    }
+
+    int blocks_per_set = number_of_cache_blocks / no_of_sets;
+
+    int hits = 0;
+    int misses = 0;
+
     mem_access_t access;
     /* Loop until the whole trace file has been read. */
     while(1) {
+
         access = read_transaction(ptr_file);
         // If no transactions left, break out of loop.
         if (access.address == 0)
             break;
+        
+        
 
         /* Add your code here */
-        // if the associativity is set to 1, the cache is effectively direct-mapped
-        if (associativity == 1) {
-            uint32_t tag = access.address >> (g_cache_index_bits + g_cache_offset_bits);
-            uint32_t index = access.address << g_num_cache_tag_bits >> (g_num_cache_tag_bits + g_cache_offset_bits);
+        uint32_t tag = access.address >> (g_cache_index_bits + g_cache_offset_bits);
+        uint32_t index = ((1 << g_cache_index_bits) - 1) & access.address >> g_cache_offset_bits;
+        //uint32_t index = access.address << g_num_cache_tag_bits >> (g_num_cache_tag_bits + g_cache_offset_bits);
+        uint32_t offset = access.address << (g_num_cache_tag_bits + g_cache_index_bits);
+        
+       // printf("String is %s \n" , index);
 
-            if (hits[index] == tag) {
-                g_result.cache_hits++;
-            } else {
-                g_result.cache_misses++;
-                hits[index] = tag;
+      //  counter++;
+        
+        int i = 0;
+
+        // go through all the blocks in the set
+        while (i < blocks_per_set) {
+            // event handler for when the block is empty
+            
+            if (myCache.sets[index].blocks[i].valid == 0) {
+                
+                myCache.sets[index].blocks[i].valid = 1;
+                // fill the empty block with the address tag
+                myCache.sets[index].blocks[i].tag = tag;
+                myCache.sets[index].blocks[i].block_age = 0;
+              //  g_result.cache_misses++;
+                misses++;
+                i++;
+                break;
+            } 
+            // event handler for when the block is FULL
+            // but it is a HIT
+            else if (myCache.sets[index].blocks[i].tag == tag && myCache.sets[index].blocks[i].valid == 1) {
+                myCache.sets[index].blocks[i].block_age = 0;
+                int j = 0;
+                while (j < blocks_per_set) {
+                    if (i != j) {
+                        myCache.sets[index].blocks[j].block_age++;
+                        j++;
+                    }
+                    j++;
+                }
+                //g_result.cache_hits++;
+                hits++;
+                i++;
+                break;
             }
+        //     // even handler for when the block is FULL and NOT a hit
+            else if (replacement_policy == Random && (blocks_per_set - 1) == i) {
+                random = rand()%(blocks_per_set);
+                myCache.sets[index].blocks[random].tag = tag;
+                myCache.sets[index].blocks[random].valid = 1;
+              //  myCache.sets[index].blocks[random].block_age = 0;
+                //g_result.cache_misses++;
+                misses++;
+                i++;
+                break;
+            }
+
+            else if (replacement_policy == LRU && (blocks_per_set - 1) == i) {
+                int k = 0;
+                int max = 0;
+                int maxIndex = 0;
+                while (k < blocks_per_set) {
+                    if (myCache.sets[index].blocks[k].block_age > max) {
+                        max = myCache.sets[index].blocks[k].block_age;
+                        maxIndex = k;
+                        k++;
+                    }
+                    k++;
+                }
+
+                //g_result.cache_misses++;
+                misses++;
+
+                myCache.sets[index].blocks[maxIndex].tag = tag;
+                myCache.sets[index].blocks[maxIndex].valid = 1;
+                myCache.sets[index].blocks[maxIndex].block_age = 0;
+                while (j < blocks_per_set) {
+                    if (i != j) {
+                        myCache.sets[index].blocks[j].block_age++;
+                        j++;
+                    }
+                    j++;
+                }
+                i++;
+                break;
+                
+            }
+
+            else if (replacement_policy == FIFO && (blocks_per_set - 1) == i) {
+                FIFO_index = FIFO_index % blocks_per_set;
+                myCache.sets[index].blocks[FIFO_index].tag = tag;
+                myCache.sets[index].blocks[FIFO_index].valid = 1;
+            //    myCache.sets[index].blocks[random].block_age = 0;
+                //g_result.cache_misses++;
+                misses++;
+                FIFO_index++;
+                i++;
+                break;
+            }
+
+           i++;
         }
-
-        // FOR FULLY ASSOCIATIVE CACHE, associativity = number of cache blocks
-        // implement FIFO, LRU and Random policies
-        if (associativity == number_of_cache_blocks) {
-            if (replacement_policy == FIFO && associativity > 1) {
-                uint32_t tag = access.address >> g_cache_offset_bits;
-                //int line = 0;
-                first_in_index = first_in_index % number_of_cache_blocks;
-                
-                int hit = 0; // boolean to check if it is hit or not
-                int i = 0;
-
-                // populate the initially empty cache blocks 
-                
-                while (i < number_of_cache_blocks) {
-                    if (hit == 0) {
-                        if (hits[i] == tag) {
-                            g_result.cache_hits++;
-                            i++;
-                            hit = 1; // then hit is true
-                        }
-                    } 
-                    i++;
-                }
-
-                if (hit == 0) { // if hit is false
-                    hits[first_in_index] = tag; // replace the first in tag with the current tag
-                    g_result.cache_misses++; // increment the number of misses
-                    first_in_index++; // the next first in tag is the next tag after the original first in tag
-                }
-
-            }
-
-            if (replacement_policy == LRU && associativity > 1) {
-
-                uint32_t tag = access.address >> g_cache_offset_bits;
-                // following the example in the tutorial
-                // 1. 22 - [22]
-                // 2. 5  - [22, 5]
-                // 3. 12 - [22, 5, 12]
-                // 4. 8  - [22, 5, 12, 8]
-                // 5. 22 - [22, 5, 12, 8, 22] -> [5, 12, 8, 22] 
-                // 6. 12 - [22, 5, 12, 8, 22, 12] -> [5, 8, 22, 12]
-                // 7. 19 - [22, 5, 12, 8, 22, 12, 19] -> [19, 8, 22, 12]
-
-                // so implement a function that searches if an element is in an array
-                // then add it to a new array at the end of the new array
-                // function in python
-                // def searchAndReplace(element, array):
-                //     result = []
-                //     if element in array:
-                //         for other in array:
-                //             if other != element:
-                //                 result.append(other)
-                //         result.append(element)
-                //     else:
-                //         result.append(element)
-                //         for i in range(1, len(array)):
-                //             result.append(array[i])
-                //     return result
-                
-                current_position = current_position % number_of_cache_blocks;
-
-                while (i < number_of_cache_blocks) {
-                    if (hit == 0) {
-                        if (hits[i] == tag) {
-                            shiftArray(hits, i, current_position);
-                            g_result.cache_hits++;
-                            i++;
-                            hit = 1; // then hit is true
-                        }
-                    } 
-                    i++;
-                }
-
-                if (hit == 0) { // if hit is false
-                    hits[0] = tag; 
-                    shiftArray(hits, 0, current_position);
-                    g_result.cache_misses++; 
-                    current_position++; 
-                }
-
-
-                
-
-            }
-                
-
-            }
-        }
-
 
     }
+
+    g_result.cache_hits = hits;
+    g_result.cache_misses = misses;
 
     /* Do not modify code below. */
     /* Make sure that all the parameters are appropriately populated. */
