@@ -276,6 +276,13 @@ int main(int argc, char** argv) {
                 myCache.sets[index].blocks[i].tag = tag;
                 myCache.sets[index].blocks[i].block_age = 0;
               //  g_result.cache_misses++;
+                while (j < blocks_per_set) {
+                    if (i != j) {
+                        myCache.sets[index].blocks[j].block_age++;
+                        j++;
+                    }
+                    j++;
+                }
                 misses++;
                 i++;
                 break;
