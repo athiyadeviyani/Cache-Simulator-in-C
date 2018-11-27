@@ -6,6 +6,12 @@
  * *    TA: Siavash Katebzadeh
  ***************************************************************************/
 
+/*
+TERMINAL COMMANDS
+gcc -o mem_sim mem_sim.c -std=gnu99 -lm
+./mem_sim FIFO 4 256 32 mem_trace.txt
+*/
+
 // 
 #include <stdio.h>
 #include <stdlib.h>
@@ -201,20 +207,12 @@ int main(int argc, char** argv) {
     g_cache_offset_bits = log(cache_block_size) / log(2);
     g_cache_index_bits = (int) (log(no_of_sets) / log(2));
     g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
-    // while (i < no_of_sets) {
-    //     while (j < associativity) {
-    //        myCache.sets[i].blocks[j].valid = 0;
-    //        myCache.sets[i].blocks[j].tag = 0;
-    //        myCache.sets[i].blocks[j].block_age = 0;
-    //        j++;
-    //    }
-    //    i++;
-    // }
 
-    int FIFO_index = 0;
+
+    //int FIFO_index = 0;
 
     int random = 0;
-    int counter = 0;
+    //int counter = 0;
 
     int k = 0;
 
@@ -239,8 +237,15 @@ int main(int argc, char** argv) {
 
     int blocks_per_set = number_of_cache_blocks / no_of_sets;
 
-    int hits = 0;
-    int misses = 0;
+    int* FIFO_index_array = (int*) malloc(no_of_sets * sizeof(int));
+    int* LRU_index_array = (int*) malloc(no_of_sets * sizeof(int));
+
+    int l = 0;
+
+    for (l = 0; l < blocks_per_set; l++) {
+        FIFO_index_array[l] = 0;
+        LRU_index_array[l] = 0;
+    }
 
     mem_access_t access;
     /* Loop until the whole trace file has been read. */
@@ -260,31 +265,35 @@ int main(int argc, char** argv) {
         uint32_t offset = access.address << (g_num_cache_tag_bits + g_cache_index_bits);
         
        // printf("String is %s \n" , index);
-
-      //  counter++;
         
-        int i = 0;
 
+        
+        int i;
+        //printf("tag is: %u\n", tag);
         // go through all the blocks in the set
-        while (i < blocks_per_set) {
+        for (i = 0; i < blocks_per_set; i++) {
             // event handler for when the block is empty
             
             if (myCache.sets[index].blocks[i].valid == 0) {
                 
                 myCache.sets[index].blocks[i].valid = 1;
                 // fill the empty block with the address tag
+                
+                
+              //  g_result.cache_misses++;
+                int j = 0;
+                for (j = 0; j < blocks_per_set; j++) {
+               //     if (i != j) {
+                    myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
+                 //   }
+                }
+
                 myCache.sets[index].blocks[i].tag = tag;
                 myCache.sets[index].blocks[i].block_age = 0;
-              //  g_result.cache_misses++;
-                while (j < blocks_per_set) {
-                    if (i != j) {
-                        myCache.sets[index].blocks[j].block_age++;
-                        j++;
-                    }
-                    j++;
-                }
-                misses++;
-                i++;
+                
+                g_result.cache_misses++;
+                //printf("%s \n" , "MISS-add");
+            //    i++;
                 break;
             } 
             // event handler for when the block is FULL
@@ -292,80 +301,84 @@ int main(int argc, char** argv) {
             else if (myCache.sets[index].blocks[i].tag == tag && myCache.sets[index].blocks[i].valid == 1) {
                 myCache.sets[index].blocks[i].block_age = 0;
                 int j = 0;
-                while (j < blocks_per_set) {
+                for (j = 0; j < blocks_per_set; j++) {
                     if (i != j) {
-                        myCache.sets[index].blocks[j].block_age++;
-                        j++;
+                        myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
                     }
-                    j++;
                 }
-                //g_result.cache_hits++;
-                hits++;
-                i++;
+                g_result.cache_hits++;
+                //hits++;
+                //printf("%s \n" , "HIT");
+             //   i++;
                 break;
             }
         //     // even handler for when the block is FULL and NOT a hit
-            else if (replacement_policy == Random && (blocks_per_set - 1) == i) {
+            else if (replacement_policy == Random && ( i == (blocks_per_set - 1)) ) {
                 random = rand()%(blocks_per_set);
                 myCache.sets[index].blocks[random].tag = tag;
                 myCache.sets[index].blocks[random].valid = 1;
               //  myCache.sets[index].blocks[random].block_age = 0;
-                //g_result.cache_misses++;
-                misses++;
-                i++;
+                g_result.cache_misses++;
+                //misses++;
+                //printf("%s \n" , "MISS-replace");
+            //    i++;
                 break;
             }
 
-            else if (replacement_policy == LRU && (blocks_per_set - 1) == i) {
+            else if (replacement_policy == LRU && ( i == (blocks_per_set - 1))) {
                 int k = 0;
-                int max = 0;
-                int maxIndex = 0;
-                while (k < blocks_per_set) {
+                int max = -1;
+                for (k = 0; k < blocks_per_set; k++) {
                     if (myCache.sets[index].blocks[k].block_age > max) {
                         max = myCache.sets[index].blocks[k].block_age;
-                        maxIndex = k;
-                        k++;
+                        LRU_index_array[index] = k;
                     }
-                    k++;
                 }
 
-                //g_result.cache_misses++;
-                misses++;
+                g_result.cache_misses++;
 
-                myCache.sets[index].blocks[maxIndex].tag = tag;
-                myCache.sets[index].blocks[maxIndex].valid = 1;
-                myCache.sets[index].blocks[maxIndex].block_age = 0;
-                while (j < blocks_per_set) {
-                    if (i != j) {
-                        myCache.sets[index].blocks[j].block_age++;
-                        j++;
-                    }
-                    j++;
+                //printf("%s \n" , "MISS-replace");
+
+                
+
+                int j = 0;
+                for (j = 0; j < blocks_per_set; j++) {
+                    //if (i != j) {
+                    myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
+                    //}
                 }
-                i++;
+
+                myCache.sets[index].blocks[LRU_index_array[index]].tag = tag;
+                myCache.sets[index].blocks[LRU_index_array[index]].valid = 1;
+                myCache.sets[index].blocks[LRU_index_array[index]].block_age = 0;
+            //    i++;
                 break;
                 
             }
 
-            else if (replacement_policy == FIFO && (blocks_per_set - 1) == i) {
-                FIFO_index = FIFO_index % blocks_per_set;
-                myCache.sets[index].blocks[FIFO_index].tag = tag;
-                myCache.sets[index].blocks[FIFO_index].valid = 1;
+            else if (replacement_policy == FIFO && ( i == (blocks_per_set - 1))) {
+                FIFO_index_array[index] = FIFO_index_array[index] % blocks_per_set;
+                myCache.sets[index].blocks[FIFO_index_array[index]].tag = tag;
+                myCache.sets[index].blocks[FIFO_index_array[index]].valid = 1;
             //    myCache.sets[index].blocks[random].block_age = 0;
-                //g_result.cache_misses++;
-                misses++;
-                FIFO_index++;
-                i++;
+                g_result.cache_misses++;
+                //misses++;
+                //printf("%s \n" , "MISS-replace");
+                FIFO_index_array[index]++;
+            //    i++;
                 break;
             }
 
-           i++;
+           //i++;
         }
 
     }
-
-    g_result.cache_hits = hits;
-    g_result.cache_misses = misses;
+    
+    int i;
+    for (i = 0; i < no_of_sets; i++) {
+        free(myCache.sets[i].blocks);
+    }
+    free(myCache.sets);
 
     /* Do not modify code below. */
     /* Make sure that all the parameters are appropriately populated. */

@@ -21,7 +21,7 @@ Address: 0x5b76a20 , tag: 0xb6ed4 , set index: 1, offset:  0, Added item for the
 Address: 0x42d23a7a, tag: 0x85a474, set index: 3, offset: 26, Added item for the first time
 Address: 0x7b76a18 , tag: 0xf6ed4 , set index: 0, offset: 24, Added item for the first time
 Address: 0x52d23a7c, tag: 0xa5a474, set index: 3, offset: 28, Cache Miss - replacing entry
-Address: 0x12d23a7d, tag: 0x25a474, set index: 3, offset: 29, Cache Miss - replacing entry
+Address: 0x12d23a7d, tag: 0x25a474, set index: 3, offset: 29, Cache Hit
 Address: 0x12d23a80, tag: 0x25a475, set index: 0, offset:  0, Added item for the first time
 Address: 0x12d23a84, tag: 0x25a475, set index: 0, offset:  4, Cache Hit
 Address: 0x12d23a86, tag: 0x25a475, set index: 0, offset:  6, Cache Hit
@@ -39,5 +39,5 @@ Final cache state:
 |0         |     0xf6ed4|    0x25a475|          --|          --|
 |1         |    0x156ed4|     0xb6ed4|          --|          --|
 |2         |    0x25a405|    0x156ed4|          --|          --|
-|3         |    0xa5a474|    0x25a474|    0x65a474|    0x85a474|
+|3         |    0x25a474|    0xa5a474|    0x65a474|    0x85a474|
 ----------------------------------------------------------------
