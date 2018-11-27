@@ -393,9 +393,9 @@ int main(int argc, char** argv) {
     }
     
     // free the memory used by the previous cache set, cache block, and cache allocation
-    int i;
-    for (i = 0; i < no_of_sets; i++) {
-        free(myCache.sets[i].blocks);
+    int a;
+    for (a = 0; a < no_of_sets; a++) {
+        free(myCache.sets[a].blocks);
     }
     free(myCache.sets);
 
