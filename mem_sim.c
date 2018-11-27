@@ -179,26 +179,24 @@ int main(int argc, char** argv) {
 
     /* You may want to setup your Cache structure here. */
 
-    
-    //  STRUCT FOR CACHE BLOCK
+    // Struct for the cache block
     typedef struct {
       uint32_t valid;
       uint32_t tag;
       int block_age;
     } Block;
 
-    // STRUCT FOR CACHE SET
+    // Struct for the cache set
     typedef struct {
       Block* blocks;
     } Set;
 
-    // STRUCT FOR ACTUAL CACHE
+    // Final cache structure
     typedef struct {
       Set* sets;
     } Cache;
 
-    // dynamically allocate the size of a cache set
-    
+    // Bit calculations
     uint32_t g_cache_index_bits = 0;
     uint32_t no_of_sets = 0;
 
@@ -208,14 +206,11 @@ int main(int argc, char** argv) {
     g_cache_index_bits = (int) (log(no_of_sets) / log(2));
     g_num_cache_tag_bits = 32 - g_cache_offset_bits - g_cache_index_bits;
 
-
-    //int FIFO_index = 0;
-
     int random = 0;
-    //int counter = 0;
 
     int k = 0;
 
+    // Dynamically allocate memory for the cache block, the cache set, and the cache
     Cache myCache;
     myCache.sets = (Set*) malloc(no_of_sets * sizeof(Set));
 
@@ -223,7 +218,6 @@ int main(int argc, char** argv) {
         myCache.sets[k].blocks = (Block*)malloc(sizeof(Block) * (associativity));
     }
 
-    // dynamically allocate the size for a block in each set
     int i = 0;
     int j = 0;
 
@@ -235,13 +229,16 @@ int main(int argc, char** argv) {
         }
     }
 
+    // blocks per set = associativity
     int blocks_per_set = number_of_cache_blocks / no_of_sets;
 
+    // Dynamically allocate the array that stores the FIFO and LRU indexes of each set
     int* FIFO_index_array = (int*) malloc(no_of_sets * sizeof(int));
     int* LRU_index_array = (int*) malloc(no_of_sets * sizeof(int));
 
     int l = 0;
 
+    // Initialize each index in each array to 0
     for (l = 0; l < blocks_per_set; l++) {
         FIFO_index_array[l] = 0;
         LRU_index_array[l] = 0;
@@ -256,76 +253,87 @@ int main(int argc, char** argv) {
         if (access.address == 0)
             break;
         
-        
 
         /* Add your code here */
+
+        // Extract the tag, index, and offset from the address 
         uint32_t tag = access.address >> (g_cache_index_bits + g_cache_offset_bits);
         uint32_t index = ((1 << g_cache_index_bits) - 1) & access.address >> g_cache_offset_bits;
-        //uint32_t index = access.address << g_num_cache_tag_bits >> (g_num_cache_tag_bits + g_cache_offset_bits);
         uint32_t offset = access.address << (g_num_cache_tag_bits + g_cache_index_bits);
         
-       // printf("String is %s \n" , index);
-        
-
-        
         int i;
-        //printf("tag is: %u\n", tag);
+        
         // go through all the blocks in the set
         for (i = 0; i < blocks_per_set; i++) {
-            // event handler for when the block is empty
             
-            if (myCache.sets[index].blocks[i].valid == 0) {
-                
-                myCache.sets[index].blocks[i].valid = 1;
-                // fill the empty block with the address tag
-                
-                
-              //  g_result.cache_misses++;
+            // event handler for when the block is empty
+            if (myCache.sets[index].blocks[i].valid == 0) {  
+
+                // assign the tag to the block
+                myCache.sets[index].blocks[i].tag = tag;
+
+                // mark it as not empty (valid)
+                myCache.sets[index].blocks[i].valid = 1;            
+
+                // increase the block age for all the other blocks
                 int j = 0;
                 for (j = 0; j < blocks_per_set; j++) {
-               //     if (i != j) {
                     myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
-                 //   }
                 }
 
-                myCache.sets[index].blocks[i].tag = tag;
+                // set the block age of the current block to 0 (because it's the most recently accessed)
                 myCache.sets[index].blocks[i].block_age = 0;
-                
+
+                // increment the number of misses
                 g_result.cache_misses++;
-                //printf("%s \n" , "MISS-add");
-            //    i++;
+
                 break;
             } 
-            // event handler for when the block is FULL
-            // but it is a HIT
+
+            // event handler for when the block is FULL but it is a HIT
+            // condition for a hit is when the address tag is equal to the tag in the cache block
             else if (myCache.sets[index].blocks[i].tag == tag && myCache.sets[index].blocks[i].valid == 1) {
+
+                // set the block age of the current block to 0 (because it's the most recently accessed)
                 myCache.sets[index].blocks[i].block_age = 0;
+
+                // increase the block age for all the other blocks
                 int j = 0;
                 for (j = 0; j < blocks_per_set; j++) {
-                    if (i != j) {
-                        myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
-                    }
+                    myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
                 }
+
+                // set the block age of the current block to 0 (because it's the most recently accessed)
+                myCache.sets[index].blocks[i].block_age = 0;
+
+                // increment the number of hits
                 g_result.cache_hits++;
-                //hits++;
-                //printf("%s \n" , "HIT");
-             //   i++;
+
                 break;
             }
-        //     // even handler for when the block is FULL and NOT a hit
+
+            // event handler for when the block is full and the entire block has been searched and a hit has not been found
+            // i == (blocks_per_set - 1) ensures that the entire block has been searched
             else if (replacement_policy == Random && ( i == (blocks_per_set - 1)) ) {
+
+                // generates a random integer
                 random = rand()%(blocks_per_set);
+
+                // assign the tag to the block that has the random integer as the block number
                 myCache.sets[index].blocks[random].tag = tag;
+
+                // mark the block valid
                 myCache.sets[index].blocks[random].valid = 1;
-              //  myCache.sets[index].blocks[random].block_age = 0;
+
+                // increment the number of misses              
                 g_result.cache_misses++;
-                //misses++;
-                //printf("%s \n" , "MISS-replace");
-            //    i++;
+                
                 break;
             }
 
             else if (replacement_policy == LRU && ( i == (blocks_per_set - 1))) {
+
+                // find the oldest block in the set (maximum block age)
                 int k = 0;
                 int max = -1;
                 for (k = 0; k < blocks_per_set; k++) {
@@ -335,45 +343,56 @@ int main(int argc, char** argv) {
                     }
                 }
 
+                // increment the number of misses
                 g_result.cache_misses++;
 
-                //printf("%s \n" , "MISS-replace");
 
-                
-
+                // increase the block age for all the other blocks
                 int j = 0;
                 for (j = 0; j < blocks_per_set; j++) {
-                    //if (i != j) {
                     myCache.sets[index].blocks[j].block_age = myCache.sets[index].blocks[j].block_age + 1;
-                    //}
                 }
 
+                // asign the address tag to the current block that is the least recently used block in the set (oldest block age)
                 myCache.sets[index].blocks[LRU_index_array[index]].tag = tag;
+
+                // mark the block valid
                 myCache.sets[index].blocks[LRU_index_array[index]].valid = 1;
+
+                // set the block age of the current block to 0 (because it's the most recently accessed)
                 myCache.sets[index].blocks[LRU_index_array[index]].block_age = 0;
-            //    i++;
+            
                 break;
                 
             }
 
             else if (replacement_policy == FIFO && ( i == (blocks_per_set - 1))) {
+
+                // The FIFO index for each set is different
+                // But it moves through the entire block and moves back to the first position once it has reached the end
+                // hence the modulo operation is used here
                 FIFO_index_array[index] = FIFO_index_array[index] % blocks_per_set;
+
+                // assign the address tag to the current block which is the first in block in the set
                 myCache.sets[index].blocks[FIFO_index_array[index]].tag = tag;
+
+                // mark the block valid
                 myCache.sets[index].blocks[FIFO_index_array[index]].valid = 1;
-            //    myCache.sets[index].blocks[random].block_age = 0;
+
+                // increment the number of misses
                 g_result.cache_misses++;
-                //misses++;
-                //printf("%s \n" , "MISS-replace");
+
+                // increment the FIFO index for this particular set
                 FIFO_index_array[index]++;
-            //    i++;
+            
                 break;
             }
 
-           //i++;
         }
 
     }
     
+    // free the memory used by the previous cache set, cache block, and cache allocation
     int i;
     for (i = 0; i < no_of_sets; i++) {
         free(myCache.sets[i].blocks);
