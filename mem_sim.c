@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
     int l = 0;
 
     // Initialize each index in each array to 0
-    for (l = 0; l < blocks_per_set; l++) {
+    for (l = 0; l < no_of_sets; l++) {
         FIFO_index_array[l] = 0;
         LRU_index_array[l] = 0;
     }
