@@ -392,12 +392,19 @@ int main(int argc, char** argv) {
 
     }
     
-    // free the memory used by the previous cache set, cache block, and cache allocation
+     // free the memory allocated for the FIFO index array
+    free(FIFO_index_array);
+    
+    // free the memory allocated for the LRU index array
+    free(LRU_index_array);
+
+    // free the memory allocated for the cache block, cache set, and cache allocation
     int a;
     for (a = 0; a < no_of_sets; a++) {
         free(myCache.sets[a].blocks);
     }
     free(myCache.sets);
+
 
     /* Do not modify code below. */
     /* Make sure that all the parameters are appropriately populated. */
