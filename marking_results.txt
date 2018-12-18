@@ -1,0 +1,145 @@
+The marks and comments below are for the student with 
+matriculation number s1709906.
+
+This assignment counts for 20% of the overall mark for the Inf2C-CS course.
+
+Marking Scheme
+==============
+
+Submissions were marked out of 100 based on the following criteria. 
+All marks displayed are absolute (out of 100).
+
+Test Method:
+    We run a number of tests which test various aspects of the simulator. The tests are posted on Learn (Syllabus page).
+    We first run correctness tests, which check all valid configurations
+    of the simulator. 
+
+    This is followed by specific tests that stress test various aspects
+    of the implementation, e.g. correctness of the LRU implementation.
+
+    Marks within each type of test are as follows:
+
+    - Correctness tests check all possible configurations.
+        - Marks are given for:
+            - Cache Tag Bits
+            - Cache Offset Bits
+    - All other tests each check one particular configuration.
+        - Marks are given for: 
+            - Cache:hits
+            - Cache:misses
+    
+
+The overall marking scheme is as follows:
+Testing (70%)
+    - Correct cache configuration (20%) - Check tag, offset
+        - Sweep replacement policy, cache size, associativity and block size.
+    - Depth testing (50%) - Check hits, misses
+        - Valid bit test (Tag=0, Tag=-1): 10%
+            - Check that tags matching initial cache state aren't counted as hits.
+        - Block offset test (DM): 10%
+            - Check that only the right set of bits for the tag is stored, not the full access address
+        - DM block thrash vs 2-way SA: 10%
+            - Trace that evicts blocks soon after they are pulled into the cache in a DM configuration.
+        - Replacement policy (in SA and FA configurations with the provided trace): 10%  
+            - Test with trace exploiting temporal locality --> LRU should beat FIFO.
+        - Memory allocation : 10% 
+            - Test with a very long trace to make sure memory doesn't run out. 
+
+Compilation and Execution (10%)
+
+    - Compiles error-free (5%)  (allowed flags: -std=gnu99 -lm)
+    - Runs without errors, segfaults, etc (5%)
+
+Code Quality (20%)
+
+    - Readability - 8%
+        - Modularity - 3%
+        - Naming convention - 3%
+        - Indents - 2%
+    - Comments - 4%
+    - Libs & memory usage - 8%
+        - Allowed libs only (whatever was in the skeleton file) - 3%
+        - malloc - 5% 
+
+
+Marking Report
+==============
+
+Brief submission comments
+-------------------------
+""
+
+Code testing (out of 70)
+-----------------------
+
+Cache Correctness Sweep (out of 20):
+All tests passed.
+Marks: 20
+
+Valid Bit Test (out of 10): 
+All tests passed.
+Marks: 
+
+Block Offset Test (out of 10):
+All tests passed.
+Marks: 10
+
+DM Block Thrash Test (out of 10):
+All tests passed.
+Marks: 10
+
+Temporal Locality Test (out of 10):
+All tests passed.
+Marks: 10
+
+Long Trace Test (out of 10):
+All tests passed.
+Marks: 10
+
+Testing Total:
+70
+
+Runtime Errors (out of 5)
+------------------------
+Runs without errors
+Marks: 5
+
+Compilation (out of 5)
+-----------------------
+Compiles correctly
+Marks: 5
+
+Quality of code (out of 20)
+---------------------------
+Indentation (out of 2):
+Consistent indentation and whitespace.
+Marks: 2
+
+Modularity (out of 4):
+Good use of structs. Functions could be defined to avoid repetition in code.
+Marks: 1
+
+Naming (out of 3):
+Good, descriptive naming.
+Marks: 3
+
+Library Usage (out of 3): 
+Standard libraries used.
+Marks: 3
+
+Memory Usage (out of 5): 
+Correct use of malloc
+Marks: 5
+
+Comments (out of 4):
+Good, descriptive comments.
+Marks: 4
+
+Overall Mark
+------------
+98%
+
+
+-- 
+The University of Edinburgh is a charitable body, registered in
+Scotland, with registration number SC005336.
